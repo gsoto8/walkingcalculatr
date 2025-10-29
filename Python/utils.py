@@ -219,8 +219,15 @@ def CleanData(df):
                         pl.col('unix_timestamp').alias('time'),
                         pl.col('horizontal_accuracy').cast(pl.Float64).alias('accuracy')
                         ).sort('userId', 'time', 'lat', 'lon',  'accuracy')
-        
-        dfclean = dfclean.with_columns(time = (pl.col('time').cast(pl.Float64)/1000).cast(pl.Int32)) # Update time datatype and divide by 1000 if in miliseconds
+        # We want the timestamp to be 10 digits, so if the timestamp is 13 digits then we need to divide by 1000
+        # UPDATE: check to see if timestamp is 10 digits before dividing by 1000
+        #dfclean = dfclean.with_columns(time = (pl.col('time').cast(pl.Float64)/1000).cast(pl.Int32)) # Update time datatype and divide by 1000 if in miliseconds
+        dfclean = dfclean.with_columns(
+            pl.when(dfclean.with_columns(pl.col('time').cast(pl.String).str.len_chars() == 10))  # if 10 digits then do nothing
+            .then(pl.col('time'))
+            .when(dfclean.with_columns(pl.col('time').cast(pl.String).str.len_chars() == 13))
+            .then((pl.col('time').cast(pl.Float64)/1000).cast(pl.Int32))                        # if 13 digits then divide by 1000
+        )   
         dfclean = dfclean.unique(subset = ['userId', 'time'], maintain_order = True) # Drop duplicates
 
     elif ('ID' in df.columns) and \
@@ -254,8 +261,15 @@ def CleanData(df):
                             pl.col('time'),
                             pl.col('accuracy').cast(pl.Float64)
                             ).sort('userId', 'time', 'lat', 'lon',  'accuracy')
-
-        dfclean = dfclean.with_columns(time = (pl.col('time').cast(pl.Float64)/1000).cast(pl.Int32)) # Update time datatype and divide by 1000 if in miliseconds
+        # We want the timestamp to be 10 digits, so if the timestamp is 13 digits then we need to divide by 1000
+        # UPDATE: check to see if timestamp is 10 digits before dividing by 1000
+        #dfclean = dfclean.with_columns(time = (pl.col('time').cast(pl.Float64)/1000).cast(pl.Int32)) # Update time datatype and divide by 1000 if in miliseconds
+        dfclean = dfclean.with_columns(
+            pl.when(dfclean.with_columns(pl.col('unix_timestamp').cast(pl.String).str.len_chars() == 10))  # if 10 digits then do nothing
+            .then(pl.col('unix_timestamp'))
+            .when(dfclean.with_columns(pl.col('unix_timestamp').cast(pl.String).str.len_chars() == 13))
+            .then((pl.col('unix_timestamp').cast(pl.Float64)/1000).cast(pl.Int32))                        # if 13 digits then divide by 1000
+        )
         dfclean = dfclean.unique(subset = ['userId', 'time'], maintain_order = True) # Drop duplicates
 
     # Remove inaccurate points
