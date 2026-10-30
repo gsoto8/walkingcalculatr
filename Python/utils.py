@@ -220,7 +220,14 @@ def CleanData(df):
                         pl.col('horizontal_accuracy').cast(pl.Float64).alias('accuracy')
                         ).sort('userId', 'time', 'lat', 'lon',  'accuracy')
         
-        dfclean = dfclean.with_columns(time = (pl.col('time').cast(pl.Float64)/1000).cast(pl.Int32)) # Update time datatype and divide by 1000 if in miliseconds
+        # 10-digit Unix timestamps are already in seconds.
+        # 13-digit Unix timestamps are in milliseconds and need to be divided by 1000.
+        time_int = pl.col('time').cast(pl.Int64)
+
+        dfclean = dfclean.with_columns(pl.when(time_int.cast(pl.String).str.len_chars() == 13)
+                                       .then(time_int // 1000)
+                                       .otherwise(time_int)
+                                       .alias('time'))
         dfclean = dfclean.unique(subset = ['userId', 'time'], maintain_order = True) # Drop duplicates
 
     elif ('ID' in df.columns) and \
@@ -255,7 +262,14 @@ def CleanData(df):
                             pl.col('accuracy').cast(pl.Float64)
                             ).sort('userId', 'time', 'lat', 'lon',  'accuracy')
 
-        dfclean = dfclean.with_columns(time = (pl.col('time').cast(pl.Float64)/1000).cast(pl.Int32)) # Update time datatype and divide by 1000 if in miliseconds
+        # 10-digit Unix timestamps are already in seconds.
+        # 13-digit Unix timestamps are in milliseconds and need to be divided by 1000.
+        time_int = pl.col('time').cast(pl.Int64)
+
+        dfclean = dfclean.with_columns(pl.when(time_int.cast(pl.String).str.len_chars() == 13)
+                                       .then(time_int // 1000)
+                                       .otherwise(time_int)
+                                       .alias('time'))
         dfclean = dfclean.unique(subset = ['userId', 'time'], maintain_order = True) # Drop duplicates
 
     # Remove inaccurate points
